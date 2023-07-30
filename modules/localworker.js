@@ -3,8 +3,9 @@ Reference: https://gist.github.com/walfie/a80c4432bcff70fb826d5d28158e9cc4
 */
 
 function createWorkerFromFunc(func, ...definitions) {
-    const definitionContents = [...definitions, func].map(x => x.toString()).join("\n")
-    const blobContents = [`${definitionContents}\n${func.name}()`]
+    const definitionContents = definitions.map(x => x.toString()).join("\n")
+    const funcContents = func.toString()
+    const blobContents = [`${definitionContents}\n(${funcContents})()`]
     const blob = new Blob(blobContents, { type: "application/javascript" })
 
     const blobUrl = URL.createObjectURL(blob)
