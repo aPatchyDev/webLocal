@@ -135,12 +135,14 @@ class KeyboardHandler {
     }
 
     injectKeyUp(e) {
-        this.setKeyUp(e)
+        const ev = typeof(e) === "string" ? new KeyboardEvent("keyup", {code: e}) : e
+        this.setKeyUp(ev)
         return this
     }
 
     injectKeyDown(e) {
-        this.setKeyDown(e)
+        const ev = typeof(e) === "string" ? new KeyboardEvent("keydown", {code: e}) : e
+        this.setKeyDown(ev)
         return this
     }
 }
