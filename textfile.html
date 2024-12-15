@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            * {
+                text-align: center;
+                justify-content: center;
+                align-items: center;
+                box-sizing: inherit;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                margin: 0;
+            }
+
+            #buttons {
+                display: flex;
+                flex-direction: row;
+            }
+
+            #encoded {
+                resize: none;
+                width: 80vw;
+                text-align: left;
+                height: 95%;
+                word-break: break-all;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>File Base64 변환기</h1>
+            <div id="buttons">
+                <p>Upload: &nbsp</p>
+                <input type="file" id="upload"/>
+                <div style="width: 20ch;"></div>
+                <button onclick="downloadFile()">Download</button>
+            </div>
+        </div>
+        <div id="fields" style="flex-grow: 1;">
+            <textarea id="encoded"></textarea>
+        </div>
+        <script type="text/javascript">
+            const upload = document.getElementById("upload")
+            const field = document.getElementById("encoded")
+            upload.addEventListener("change", displayFile)
+
+            function displayFile() {
+                if(!upload.files || !upload.files[0]) return
+
+                const file = upload.files[0]
+                const reader = new FileReader()
+                reader.addEventListener("load", () => {
+                    const data = new Uint8Array(reader.result)
+                    field.value = data.toBase64({alphabet: "base64url"})
+                })
+                reader.readAsArrayBuffer(file)
+            }
+
+            function downloadFile() {
+                const data = Uint8Array.fromBase64(field.value, {alphabet: "base64url"})
+
+                const blob = new Blob([data], {type: "application/octet-stream"})
+                const url = window.URL.createObjectURL(blob)
+                downloadUrl(url)
+                setTimeout(window.URL.revokeObjectURL, 1000, url)
+            }
+
+            function downloadUrl(url) {
+                const a = document.createElement("a")
+                a.href = url
+                a.style.display = "none"
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+            }
+        </script>
+    </body>
+</html>
