@@ -32,7 +32,7 @@
     </head>
     <body>
         <div>
-            <h1>File Base64 변환기</h1>
+            <h1>File to Text Encoding 변환기</h1>
             <div id="buttons">
                 <p>Upload: &nbsp</p>
                 <input type="file" id="upload"/>
@@ -44,6 +44,73 @@
             <textarea id="encoded"></textarea>
         </div>
         <script type="text/javascript">
+            // Unsigned bitshift requires >>> 0
+            const alphabets = generateDictionary()
+            const dictBits = Math.floor(Math.log2(alphabets.length))
+
+            // bitshift operates on 32bit signed integer
+            // thus all bitshift operations must work within 31 bits
+            // encoding and decoding accumulates up to {8 + dictBits} bits
+            console.assert(dictBits < 24, "Alphabet must encode less than 24 bits per char!")
+
+            function generateDictionary() {
+                // 13 bit dictionary
+                const dict = []
+                const start = "가".charCodeAt(0)
+                const end = "힟".charCodeAt(0) + 1
+                for(let i = start; i < end; i++)
+                    dict.push(String.fromCharCode(i))
+
+                return dict
+            }
+
+            function encode(arr) {
+                let result = ""
+                let acc = 0
+                let pos = 0
+                const dictMask = (1 << dictBits) - 1
+                for (let byte of arr) {
+                    acc = ((acc << 8) | byte) >>> 0
+                    pos += 8
+                    while(pos >= dictBits) {
+                        const shift = pos - dictBits
+                        const mask = (dictMask << shift) >>> 0
+                        const ch = (acc & mask) >>> shift
+                        result += alphabets[ch]
+                        acc = (acc & ~mask) >>> 0
+                        pos -= dictBits
+                    }
+                }
+                if (acc !== 0) {
+                    const ch = (acc << (dictBits - pos)) >>> 0
+                    result += alphabets[ch]
+                }
+                return result
+            }
+
+            function decode(str) {
+                const result_size = (str.length * dictBits) >>> 3
+                const result = new Uint8Array(result_size)
+                let acc = 0
+                let pos = 0
+                let idx = 0
+                const byteMask = (1 << 8) - 1
+                for(let ch of str) {
+                    const code = alphabets.indexOf(ch)
+                    acc = ((acc << dictBits) | code) >>> 0
+                    pos += dictBits
+                    while(pos >= 8 && idx < result_size) {
+                        const shift = pos - 8
+                        const mask = (byteMask << shift) >>> 0
+                        const byte = (acc & mask) >>> shift
+                        result[idx++] = byte
+                        acc = (acc & ~mask) >>> 0
+                        pos -= 8
+                    }
+                }
+                return result
+            }
+
             const upload = document.getElementById("upload")
             const field = document.getElementById("encoded")
             upload.addEventListener("change", displayFile)
@@ -55,13 +122,13 @@
                 const reader = new FileReader()
                 reader.addEventListener("load", () => {
                     const data = new Uint8Array(reader.result)
-                    field.value = data.toBase64({alphabet: "base64url"})
+                    field.value = encode(data)
                 })
                 reader.readAsArrayBuffer(file)
             }
 
             function downloadFile() {
-                const data = Uint8Array.fromBase64(field.value, {alphabet: "base64url"})
+                const data = decode(field.value)
 
                 const blob = new Blob([data], {type: "application/octet-stream"})
                 const url = window.URL.createObjectURL(blob)
